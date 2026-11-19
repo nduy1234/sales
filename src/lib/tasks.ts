@@ -18,7 +18,7 @@ function seller(b: Brand) {
   return `Seller: ${b.name} — ${cut(b.offer, 160)}. ICP: ${cut(b.icp, 160)}.`;
 }
 function prospectLine(p: Prospect) {
-  return `Prospect: ${p.company} | ${p.industry} | ${p.size} employees | ${p.location}. Signals: ${p.signals.join("; ") || "none"}. Notes: ${cut(p.notes, 500)}`;
+  return `Prospect: ${p.company} | ${p.industry} | ${p.size ? `${p.size} employees` : "size unknown"} | ${p.location}. Signals: ${p.signals.join("; ") || "none"}. Notes: ${cut(p.notes, 500)}`;
 }
 
 export function buildMessages(task: TaskKind, x: Payload): Msg[] {
@@ -59,6 +59,18 @@ export function buildMessages(task: TaskKind, x: Payload): Msg[] {
           content: `${seller(b)}\nBrand voice: ${cut(b.voice, 200)}\nTopic: ${cut(x.topic, 200)}${p ? `\nInspired by a ${p.industry} prospect pain (do not name them): ${(p.research?.painPoints ?? p.signals).slice(0, 2).join("; ")}` : ""}\nWrite a LinkedIn post (120-170 words) for small-business owners: scroll-stopping first line, practical insight, soft CTA. No made-up statistics.\nReturn JSON: {"hook":"first line","body":"full post including hook","hashtags":[5 without #],"keywords":[5 SEO keyword phrases],"variations":[2 alternative hooks]}`,
         },
       ];
+    case "xpost":
+      return [
+        { role: "system", content: SYS },
+        {
+          role: "user",
+          content: `${seller(b)}
+Brand voice: ${cut(b.voice, 200)}
+Topic: ${cut(x.topic, 200)}
+Write for X (Twitter): a 1-3 tweet thread for small-business owners. Each tweet under 260 characters. First tweet must hook with a specific insight and include one search-friendly phrase naturally. Last tweet: soft CTA. No made-up stats, at most 2 hashtags total.
+Return JSON: {"tweets":[strings],"hashtags":[up to 2, without #],"keywords":[3 search phrases]}`,
+        },
+      ];
     case "recommendations":
       return [
         { role: "system", content: SYS },
@@ -78,7 +90,7 @@ export function simulate(task: TaskKind, x: Payload): unknown {
     case "research": {
       const sig = p!.signals;
       return {
-        summary: `${p!.company} is a ${p!.size}-person ${p!.industry.toLowerCase()} business in ${p!.location}. ${sig.length ? `Recent signals: ${sig.slice(0, 2).join(" and ").toLowerCase()}.` : "No strong recent change signals were found in the provided notes."}`,
+        summary: `${p!.company} is a ${p!.size ? `${p!.size}-person ` : ""}${p!.industry === "Unknown" ? "" : `${p!.industry.toLowerCase()} `}business${p!.location !== "—" ? ` in ${p!.location}` : ""}. ${sig.length ? `Recent signals: ${sig.slice(0, 2).join(" and ").toLowerCase()}.` : "No strong recent change signals were found in the provided notes."}`,
         needs: sig.length
           ? [`Turn ${p!.industry.toLowerCase()} search traffic into bookings`, "Modern mobile-friendly website", "Consistent local SEO & reviews"]
           : ["Maintain current visibility", "Occasional content refresh", "No urgent need identified"],
@@ -120,6 +132,16 @@ export function simulate(task: TaskKind, x: Payload): unknown {
         variations: ["Your website isn't losing traffic. It's losing bookings.", "Try booking your own business on your phone. One hand. Go."],
       };
     }
+    case "xpost":
+      return {
+        tweets: [
+          "Most local businesses don't have a traffic problem. They have a booking problem: people find you on Google, tap through on mobile, and hit a wall.",
+          "3 fixes that beat a full rebrand:\n1. A mobile page that loads fast\n2. One clear action: book, call or quote\n3. Instant confirmation so they stop shopping around",
+          "Try booking your own business on your phone, one-handed. Where did you get stuck? That's your first fix.",
+        ],
+        hashtags: ["SmallBusiness", "LocalSEO"],
+        keywords: ["online booking", "mobile website", "local SEO"],
+      };
     case "recommendations": {
       const s = x.stats!;
       const items: Recommendation[] = [];

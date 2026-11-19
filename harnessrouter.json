@@ -1,0 +1,7 @@
+{
+  "harness_id": "chrn_d8610fe264115a249dbf1f9575e382e3",
+  "name": "(pending fetch)",
+  "base": "hermes",
+  "model": "gpt-5.4-mini",
+  "instructions": "(pending fetch from HarnessRouter)"
+}

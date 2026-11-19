@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Cpu, Menu, PenSquare, RotateCcw, Users, Workflow, X } from "lucide-react";
+import { BarChart3, Bot, Cpu, Rocket, Menu, PenSquare, RotateCcw, Users, Workflow, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -9,7 +9,9 @@ import { cx } from "./ui";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: BarChart3 },
-  { href: "/workflow", label: "Agent Workflow", icon: Workflow, badge: "Demo" },
+  { href: "/autopilot", label: "Autopilot", icon: Rocket, badge: "Agent" },
+  { href: "/workflow", label: "Single-lead Workflow", icon: Workflow },
+  { href: "/research", label: "Research Agent", icon: Bot, badge: "Cloud" },
   { href: "/prospects", label: "Prospects", icon: Users },
   { href: "/content", label: "Content Studio", icon: PenSquare },
   { href: "/router", label: "Cost Router", icon: Cpu },

@@ -1,5 +1,6 @@
 export type Tier = "economy" | "balanced" | "premium";
-export type TaskKind = "research" | "score" | "outreach" | "linkedin" | "recommendations";
+export type TaskKind = "research" | "score" | "outreach" | "linkedin" | "xpost" | "recommendations";
+export type Platform = "linkedin" | "x";
 
 export interface ModelInfo {
   id: string;
@@ -83,6 +84,7 @@ export interface Prospect {
   outreach?: Outreach;
   status: ProspectStatus;
   sample?: boolean;
+  source?: { kind: "research-agent"; url?: string; date?: string; confidence?: string };
 }
 
 export interface ContentPost {
@@ -93,9 +95,12 @@ export interface ContentPost {
   hashtags: string[];
   keywords: string[];
   variations: string[];
-  status: "draft" | "approved";
+  status: "draft" | "approved" | "scheduled" | "published";
   createdAt: string;
   prospectId?: string;
+  platform: Platform;
+  scheduledFor?: string; // ISO datetime
+  publishedAt?: string;
 }
 
 export interface Recommendation {

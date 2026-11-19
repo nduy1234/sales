@@ -1,6 +1,6 @@
-# RevenuePilot — AI Sales & Marketing Agent for small businesses
+# RevenuePilot: an autonomous AI Marketing & Sales Agent for small businesses
 
-An AI revenue engine that researches prospects, scores buying intent, drafts personalized outreach and writes on-brand LinkedIn posts. Every AI call goes through **TokenRouter** to the cheapest model that can handle the task, and the app shows the model, tokens, cost and savings for each call.
+RevenuePilot finds high-intent prospects, researches and scores them, decides who deserves outreach, drafts personalized emails, and writes brand-consistent, SEO-aware content for **LinkedIn and X**. Approved content is scheduled into the best posting windows. Every AI call goes to the **cheapest model that can do the job** (via TokenRouter), and the app shows the cost of each step and the projected revenue impact.
 
 ## Run it
 
@@ -10,65 +10,76 @@ cp .env.example .env.local   # add TOKENROUTER_API_KEY for live AI
 npm run dev                  # http://localhost:3000
 ```
 
-Without a key the app runs in **simulated mode**: you get templated outputs and token counts estimated from text length, and every result is labelled "simulated". With a key, every call is a real TokenRouter request, and costs are calculated from the token counts TokenRouter returns.
-
-| Env var | Purpose |
+| Secret (server-only) | Purpose |
 |---|---|
-| `TOKENROUTER_API_KEY` | Gateway key (`tr_...`). Read on the server only and never sent to the browser. |
-| `TOKENROUTER_BASE_URL` | Defaults to `https://api.tokenrouter.io/v1` |
-| `TOKENROUTER_MODEL_ECONOMY / _BALANCED / _PREMIUM` | Gateway model IDs per tier (defaults: `openai/gpt-5-nano`, `openai/gpt-5-mini`, `anthropic/claude-sonnet-4-5`) |
+| `TOKENROUTER_API_KEY` | Live model calls for the in-app agent. Without it the app runs in **simulated mode**: outputs are templated and costs are estimated from text length. Everything simulated is labelled. |
+| `HR_API_KEY` | HarnessRouter key for the cloud **Research Agent** (live web and LinkedIn research). Set it as an env var or in the git-ignored `.env.harnessrouter`. |
+| `TOKENROUTER_BASE_URL`, `TOKENROUTER_MODEL_*` | Optional overrides (see `.env.example`) |
 
-## 2-minute demo script
+## 2-minute judge demo
 
-1. **Dashboard**: start with the fictional sample pipeline. It shows 6 prospects with free rule-based intent scores and $0 of AI spend.
-2. **Agent Workflow → Run agent workflow** (Northwind Family Dental). The agent runs four steps in order:
-   - Research → GPT-5 nano (economy)
-   - Intent score → rule signals plus a nano adjustment of up to ±10
-   - Outreach email → GPT-5 mini (balanced)
-   - LinkedIn post → GPT-5 mini
+1. **Dashboard.** Shows the pipeline, revenue impact, approval queue and AI spend, which starts at $0.
+2. **Autopilot → Run Autopilot.** One click starts the agent. It:
+   - picks the top uncontacted prospects
+   - researches and scores each one
+   - **decides** who clears the intent threshold
+   - drafts outreach for those that do
+   - writes today's LinkedIn post and X thread on the strongest pain point it found
 
-   Each step shows its model, tokens, cost and how much it saved compared with the premium model. The **Run cost** panel shows the total cost of the run next to what an all-premium run would have cost.
-3. Click **Approve outreach** and **Approve post**. Nothing is sent or published automatically.
-4. Untick **Fresh run** and run the workflow again. The stored research and score are reused at $0.
-5. **Cost Router**: shows the model catalog, the routing policy, a cost-by-task chart and a log of every request.
-6. **Dashboard → Generate** today's recommendations, which takes one economy-model call.
+   The activity timeline shows each decision with its model, tokens and cost. Example in simulated mode: 3 prospects plus 2 posts for **$0.002, against $0.032 all-premium (about 93% saved)**.
+3. **Approve all** in the approval queue. Posts are scheduled automatically: LinkedIn Tue–Thu at 9:00, X on weekdays at 12:30.
+4. **Content Studio.** The 7-day calendar shows the queue. **Open in LinkedIn/X** opens the platform's own composer with the text filled in; you press Post.
+5. **Dashboard → Revenue impact** shows:
+   - pipeline engaged
+   - projected revenue (intent-weighted)
+   - owner hours saved
+   - return on AI spend
 
-## How cost is kept low
+   Funnel assumptions are editable.
+6. **Cost Router** lists every call: the model chosen, why, tokens, cost and savings.
+7. *(With `HR_API_KEY`)* **Research Agent.** A cloud agent researches public buying signals with sources and dates. **Add N to pipeline** imports the prospects it found, ready for the next Autopilot run.
 
-- **Routing by complexity.** Extraction and scoring go to the economy tier. Writing goes to the balanced tier. The "Premium" toggle moves a task up one tier. Logic: `src/lib/models.ts`.
-- **Rules first.** Intent scores are deterministic (`src/lib/scoring.ts`). The model only adjusts the score by up to ±10 and explains why.
-- **No repeat spend.**
-  - Identical requests are cached on the server for 6 hours.
-  - Research and scores are stored per prospect and reused unless you ask for a fresh run.
-  - Recommendations are generated once a day.
-- **Bounded retries.** If a model returns unparseable JSON, the request moves up one tier once. There are no open-ended agent loops.
-- **Small prompts.** Only the fields a task needs are sent. Notes are cut to 500 characters and website text to 1,800.
-- **Measurable savings.** Each call's tokens are also priced on the premium model, so savings use the same token counts on both sides.
+## What's inside
 
-## Architecture
+| Feature | Where |
+|---|---|
+| Autopilot: bounded multi-prospect agent run that decides who to contact (intent threshold) | `src/app/autopilot` |
+| Approval queue: nothing is sent or posted without you | `src/components/ApprovalQueue.tsx` |
+| Single-lead workflow, a step-by-step deep dive | `src/app/workflow` |
+| Prospect research, rule-plus-AI intent scoring, outreach drafts | `src/app/prospects`, `src/lib/scoring.ts` |
+| LinkedIn posts and X threads (280-character check), SEO keywords, hooks, brand voice | `src/app/content`, `src/lib/tasks.ts` |
+| Scheduling into posting windows, due alerts, compose links | `src/lib/schedule.ts` |
+| Revenue impact projection and time saved | `src/lib/revenue.ts`, `src/components/RevenueImpact.tsx` |
+| Cost-optimized router: economy, balanced and premium tiers, caching, one bounded escalation | `src/lib/models.ts`, `src/lib/llm.ts` |
+| Cloud Research Agent (HarnessRouter) with streamed progress, cancel, follow-ups and file downloads | `src/app/research`, `src/lib/harnessrouter/`, `harnessrouter.json` |
+| Importing discovered prospects from the agent's evidence table | `src/lib/discovery.ts` |
 
-- Next.js 14 (App Router) + TypeScript + Tailwind + Recharts
-- `src/app/api/agent/[task]`: one server route per agent task (`research`, `score`, `outreach`, `linkedin`, `recommendations`)
-- `src/app/api/status`: shows the current mode and routing policy. `?check=1` checks the key against `GET /models`, which spends no tokens.
-- `src/lib/llm.ts`: TokenRouter client (OpenAI-compatible `/chat/completions`), cache and escalation
-- `src/lib/store.tsx`: client state (prospects, content, usage log), saved to `localStorage`
+### How cost stays low
 
-## Limitations (honest)
+| Task | Tier |
+|---|---|
+| Research, scoring, X threads, daily plan | Economy model |
+| LinkedIn posts, outreach | Balanced model |
+| Anything with Premium switched on | One tier up, only when you ask |
 
-- **No real prospect data.**
-  - No live web search or contact-enrichment API is connected.
-  - Research uses the notes you enter plus the prospect's homepage text, when the domain can be reached.
-  - Decision-makers are inferred *roles*, not people.
-- **Sample data is fictional.** Sample companies and contacts are made up. "Weighted opportunity" is deal value × intent score: an estimate, not revenue.
-- **Estimated prices.** Costs use list-price estimates in `src/lib/models.ts`. Your actual TokenRouter or provider bill may differ.
-- **No email or LinkedIn integration.** Approved items are copied and sent by hand.
-- **No auth or database.** The repo had neither, so data is stored in the browser per user. Clear it with "Reset demo data".
-- **Not tested against a live key.** The live TokenRouter path has not been run in development. Use **Cost Router → Verify key** after adding your key.
+- **Rules before AI.** Intent scores come from fixed rules; the model can only adjust them by ±10.
+- **Smart reuse.** Research and scores are stored and reused, identical requests are cached on the server, and Autopilot skips writing calls for low-intent leads.
+- **Bounded retries.** Unparseable output escalates at most once. There are no open-ended loops.
+
+## Honest limitations
+
+- **No live posting.** No LinkedIn or X account is connected. Scheduling is an in-app queue: when a post is due, you open the platform's composer with the text already filled in and press Post. X threads open with tweet 1 filled in; the rest are copied.
+- **Discovery needs the Research Agent.** Live prospect discovery requires `HR_API_KEY`. The built-in sample prospects are fictional.
+- **Projections only.** Revenue and ROI are projections from editable funnel assumptions, not booked revenue.
+- **Estimated prices.** Model prices are list-price estimates in `src/lib/models.ts`.
+- **No login.**
+  - Pipeline and content data live in the browser (`localStorage`).
+  - Research Agent tasks live on the server in `.data/` (git-ignored), tied to an anonymous httpOnly cookie ID.
 
 ## Tests
 
 ```bash
-npm test         # router selection, pricing, scoring, JSON parsing
+npm test          # 17 tests: router, scoring, scheduling, revenue model, discovery parser, SSE parsing
 npm run typecheck
 npm run build
 ```

@@ -76,6 +76,15 @@ export async function POST(req: Request, { params }: { params: { task: string } 
       return NextResponse.json({ data: post, usage });
     }
 
+    if (task === "xpost") {
+      const { data, usage } = await runTask(task, { ...body, topic: str(body.topic) || "Practical marketing advice for local businesses" }, { premium: body.premium });
+      const d = data as Record<string, unknown>;
+      const tweets = arr(d.tweets, 3).map((t) => (t.length > 280 ? `${t.slice(0, 277)}...` : t));
+      if (!tweets.length) throw new AgentError("Model returned no tweets.");
+      const post = { hook: tweets[0], body: tweets.join("\n\n"), hashtags: arr(d.hashtags, 2).map((h) => h.replace(/^#/, "").replace(/\s+/g, "")), keywords: arr(d.keywords, 4), variations: [] as string[] };
+      return NextResponse.json({ data: post, usage });
+    }
+
     // recommendations
     const { data, usage } = await runTask(task, body, { premium: body.premium });
     const items: Recommendation[] = (Array.isArray((data as { items?: unknown }).items) ? (data as { items: Record<string, unknown>[] }).items : [])

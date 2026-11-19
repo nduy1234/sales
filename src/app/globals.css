@@ -5,3 +5,20 @@
 body {
   @apply bg-slate-50 text-slate-800 antialiased;
 }
+
+/* Agent markdown output */
+.prose-agent h1, .prose-agent h2, .prose-agent h3 { @apply mb-2 mt-5 font-semibold text-slate-900 first:mt-0; }
+.prose-agent h1 { @apply text-lg; }
+.prose-agent h2 { @apply text-base; }
+.prose-agent h3 { @apply text-sm; }
+.prose-agent p { @apply my-2 leading-relaxed; }
+.prose-agent ul { @apply my-2 list-disc space-y-1 pl-5; }
+.prose-agent ol { @apply my-2 list-decimal space-y-1 pl-5; }
+.prose-agent a { @apply break-words text-brand-600 underline; }
+.prose-agent code { @apply rounded bg-slate-100 px-1 py-0.5 text-[12px]; }
+.prose-agent pre { @apply my-3 overflow-x-auto rounded-lg bg-slate-50 p-3; }
+.prose-agent blockquote { @apply my-3 border-l-4 border-brand-200 bg-brand-50/40 py-1 pl-4 text-slate-700; }
+.prose-agent hr { @apply my-5 border-slate-200; }
+.prose-agent table { @apply my-3 block w-full overflow-x-auto text-xs; border-collapse: collapse; }
+.prose-agent th { @apply border border-slate-200 bg-slate-50 px-2 py-1.5 text-left font-semibold text-slate-700; }
+.prose-agent td { @apply border border-slate-200 px-2 py-1.5 align-top; }

@@ -104,7 +104,7 @@ function Detail({ p, onClose }: { p: Prospect; onClose: () => void }) {
   return (
     <Card
       title={p.company}
-      subtitle={`${p.industry} · ${p.size} employees · ${p.location}${p.sample ? " · sample data" : ""}`}
+      subtitle={`${p.industry}${p.size ? ` · ${p.size} employees` : ""} · ${p.location}${p.sample ? " · sample data" : ""}`}
       action={<button onClick={onClose} className="rounded p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>}
     >
       <div className="space-y-4">
@@ -112,6 +112,12 @@ function Detail({ p, onClose }: { p: Prospect; onClose: () => void }) {
           <ScoreBadge score={p.score} size="lg" />
           <span className="font-mono text-sm text-slate-600">{fmtMoney(p.dealValue)} deal</span>
         </div>
+        {p.source && (
+          <div className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+            Discovered by Research Agent{p.source.confidence ? ` · ${p.source.confidence} confidence` : ""}{p.source.date ? ` · ${p.source.date}` : ""}
+            {p.source.url && <> · <a href={p.source.url} target="_blank" rel="noopener noreferrer nofollow" className="font-medium underline">evidence</a></>}
+          </div>
+        )}
         {p.contact && <div className="text-xs text-slate-600">Contact: <span className="font-medium text-slate-800">{p.contact.name}</span>, {p.contact.title}</div>}
         <p className="text-xs text-slate-600">{p.notes}</p>
 

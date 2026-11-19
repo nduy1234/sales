@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { uid, useStore } from "./store";
-import type { ContentPost, Outreach, Prospect, Research, Score, UsageRecord } from "./types";
+import type { ContentPost, Outreach, Platform, Prospect, Research, Score, UsageRecord } from "./types";
 
 export type Result<T> = { data: T; usage?: UsageRecord; reused?: boolean };
 
@@ -40,9 +40,9 @@ export function useAgent() {
   );
 
   const post = useCallback(
-    async (topic: string, p?: Prospect, premium = false): Promise<Result<ContentPost>> => {
-      const r = await callAgent<Omit<ContentPost, "id" | "status" | "createdAt" | "topic">>("linkedin", { topic, prospect: p ? strip(p) : undefined }, premium);
-      const cp: ContentPost = { ...r.data, id: uid(), topic, status: "draft", createdAt: new Date().toISOString(), prospectId: p?.id };
+    async (topic: string, p?: Prospect, premium = false, platform: Platform = "linkedin"): Promise<Result<ContentPost>> => {
+      const r = await callAgent<Omit<ContentPost, "id" | "status" | "createdAt" | "topic" | "platform">>(platform === "x" ? "xpost" : "linkedin", { topic, prospect: p ? strip(p) : undefined }, premium);
+      const cp: ContentPost = { ...r.data, id: uid(), topic, platform, status: "draft", createdAt: new Date().toISOString(), prospectId: p?.id };
       savePost(cp);
       return { data: cp, usage: r.usage };
     },

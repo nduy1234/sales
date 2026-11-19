@@ -21,6 +21,7 @@ export const TASKS: Record<TaskKind, TaskSpec> = {
   score: { label: "Intent scoring", complexity: 1, maxTokens: 250, why: "Rules compute the score; model only adjusts ±10 and explains" },
   recommendations: { label: "Daily plan", complexity: 1, maxTokens: 500, why: "Short structured list from dashboard stats" },
   outreach: { label: "Personalized outreach", complexity: 2, maxTokens: 500, why: "Persuasive writing needs a mid-tier model" },
+  xpost: { label: "X post / thread", complexity: 1, maxTokens: 400, why: "Short-form copy under tight length limits; an economy model handles it" },
   linkedin: { label: "LinkedIn post", complexity: 2, maxTokens: 800, why: "Brand-voice copywriting needs a mid-tier model" },
 };
 

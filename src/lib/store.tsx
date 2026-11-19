@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SAMPLE_BRAND, SAMPLE_PROSPECTS } from "./sample-data";
 import { finalize, ruleScore } from "./scoring";
+import { DEFAULT_ASSUMPTIONS, type Assumptions } from "./revenue";
 import type { Brand, ContentPost, ModelInfo, Prospect, Recommendation, TaskKind, UsageRecord } from "./types";
 
 export interface Status {
@@ -19,6 +20,7 @@ interface State {
   posts: ContentPost[];
   usage: UsageRecord[];
   recs: { date: string; items: Recommendation[] } | null;
+  assumptions: Assumptions;
 }
 
 const KEY = "revenue-agent:v1";
@@ -26,7 +28,7 @@ const KEY = "revenue-agent:v1";
 function seed(): State {
   // Seeded prospects get a free rule-based score only — no AI output is pre-filled.
   const prospects = SAMPLE_PROSPECTS.map((p) => ({ ...p, score: finalize(ruleScore(p, SAMPLE_BRAND), 0, "Rule-based signal score (no AI run yet).", "rules") }));
-  return { brand: SAMPLE_BRAND, prospects, posts: [], usage: [], recs: null };
+  return { brand: SAMPLE_BRAND, prospects, posts: [], usage: [], recs: null, assumptions: DEFAULT_ASSUMPTIONS };
 }
 
 interface Ctx extends State {
@@ -41,6 +43,8 @@ interface Ctx extends State {
   updatePost: (id: string, patch: Partial<ContentPost>) => void;
   setBrand: (b: Brand) => void;
   setRecs: (r: State["recs"]) => void;
+  setAssumptions: (a: Assumptions) => void;
+  addProspects: (ps: Prospect[]) => void;
   reset: () => void;
 }
 
@@ -56,7 +60,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) setState({ ...seed(), ...JSON.parse(raw) });
+      if (raw) {
+        const saved = JSON.parse(raw) as Partial<State>;
+        // Older saves predate multi-platform posts.
+        const posts = (saved.posts ?? []).map((p) => ({ ...p, platform: p.platform ?? "linkedin" }));
+        setState({ ...seed(), ...saved, posts });
+      }
     } catch {}
     setReady(true);
   }, []);
@@ -110,6 +119,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updatePost: (id, patch) => setState((s) => ({ ...s, posts: s.posts.map((p) => (p.id === id ? { ...p, ...patch } : p)) })),
       setBrand: (brand) => setState((s) => ({ ...s, brand })),
       setRecs: (recs) => setState((s) => ({ ...s, recs })),
+      setAssumptions: (assumptions) => setState((s) => ({ ...s, assumptions })),
+      addProspects: (ps) => setState((s) => ({ ...s, prospects: [...ps, ...s.prospects] })),
       reset: () => setState(seed()),
     }),
     [state, ready, status, refreshStatus, callAgent],

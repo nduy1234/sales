@@ -4,6 +4,8 @@ import { ArrowRight, Coins, Flame, Lightbulb, PenSquare, PiggyBank, Send, Sparkl
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ApprovalQueue } from "@/components/ApprovalQueue";
+import { RevenueImpact } from "@/components/RevenueImpact";
 import { Button, Card, EmptyState, ErrorBanner, ModelBadge, PageHeader, ScoreBadge, Skeleton, StageBadge, Stat, cx } from "@/components/ui";
 import { fmtMoney, fmtUsd, totals, useStore } from "@/lib/store";
 import type { Recommendation, UsageRecord } from "@/lib/types";
@@ -72,9 +74,9 @@ export default function Dashboard() {
         title={`Good day, ${brand.name.split(" ")[0]}`}
         subtitle="Your AI revenue engine at a glance — leads, outreach, content and exactly what the AI cost."
         action={
-          <Link href="/workflow">
+          <Link href="/autopilot">
             <Button className="px-4 py-2.5">
-              <Sparkles className="h-4 w-4" /> Run agent workflow <ArrowRight className="h-4 w-4" />
+              <Sparkles className="h-4 w-4" /> Run Autopilot <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
         }
@@ -87,6 +89,11 @@ export default function Dashboard() {
         <Stat label="Outreach" value={`${outreachApproved}/${outreachDrafted}`} hint="approved / drafted" icon={<Send className="h-4 w-4" />} accent="bg-sky-50 text-sky-600" />
         <Stat label="Content" value={posts.length} hint={`${posts.filter((p) => p.status === "approved").length} approved posts`} icon={<PenSquare className="h-4 w-4" />} accent="bg-violet-50 text-violet-600" />
         <Stat label="AI spend" value={<span className="font-mono">{fmtUsd(t.spent)}</span>} hint={t.calls ? <span className="text-emerald-600">saved {fmtUsd(t.saved)} ({t.pct.toFixed(0)}%)</span> : "no calls yet"} icon={<PiggyBank className="h-4 w-4" />} accent="bg-emerald-50 text-emerald-600" />
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2"><RevenueImpact /></div>
+        <ApprovalQueue compact />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -166,7 +173,7 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <EmptyState title="No AI calls yet" body="Run the agent workflow to see routed cost vs. a premium-only baseline." action={<Link href="/workflow"><Button>Run workflow</Button></Link>} />
+            <EmptyState title="No AI calls yet" body="Run the agent workflow to see routed cost vs. a premium-only baseline." action={<Link href="/autopilot"><Button>Run Autopilot</Button></Link>} />
           )}
         </Card>
 
