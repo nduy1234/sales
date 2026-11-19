@@ -1,7 +1,9 @@
 # RevenuePilot: an autonomous AI Marketing & Sales Agent for small businesses
 
 RevenuePilot finds high-intent prospects, researches and scores them, decides who deserves outreach, drafts personalized emails, and writes brand-consistent, SEO-aware content for **LinkedIn and X**. Approved content is scheduled into the best posting windows. Every AI call goes to the **cheapest model that can do the job** (via TokenRouter), and the app shows the cost of each step and the projected revenue impact.
+
 Demo: https://youtu.be/fnVtk5StNGg
+
 Link: https://sales-eight-eta.vercel.app/
 
 ## Run it
