@@ -131,9 +131,12 @@ export default function ResearchPage() {
       es.onerror = () => {
         // Stream dropped (network, server restart): fall back to polling the task.
         es.close();
+        let tries = 0;
         const poll = async () => {
+          if (esRef.current !== es || ++tries > 900) return; // page left or another task followed
           const r = await fetch(`/api/agent-tasks/${id}`, { cache: "no-store" }).catch(() => null);
-          const j = r?.ok ? await r.json() : null;
+          if (r?.status === 404) return setLive(null);
+          const j = r?.ok ? await r.json().catch(() => null) : null;
           if (j?.task) {
             upsert(j.task);
             if (TERMINAL.has(j.task.status)) return setLive(null);
@@ -155,7 +158,10 @@ export default function ResearchPage() {
         if (running) follow(running.id);
       }
     });
-    return () => esRef.current?.close();
+    return () => {
+      esRef.current?.close();
+      esRef.current = null; // also stops any fallback polling
+    };
   }, [load, follow]);
 
   async function submit(text: string, continueId?: string) {

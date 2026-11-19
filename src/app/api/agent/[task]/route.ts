@@ -13,7 +13,7 @@ const str = (v: unknown, d = "") => (typeof v === "string" ? v.trim() : d);
 
 export async function POST(req: Request, { params }: { params: { task: string } }) {
   const task = params.task as TaskKind;
-  if (!(task in TASKS)) return NextResponse.json({ error: `Unknown task "${params.task}"` }, { status: 404 });
+  if (!Object.prototype.hasOwnProperty.call(TASKS, task)) return NextResponse.json({ error: `Unknown task "${params.task}"` }, { status: 404 });
 
   let body: Payload & { premium?: boolean };
   try {

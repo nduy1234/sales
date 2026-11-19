@@ -20,7 +20,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           ctrl.enqueue(enc.encode(`data: ${JSON.stringify(obj)}\n\n`));
         } catch {}
       };
+      let finished = false;
       const finish = async () => {
+        if (finished) return;
+        finished = true;
         const done = userId ? await getTask(params.id, userId) : undefined;
         if (done) send({ kind: "final", task: publicTask(done) });
         cleanup();
@@ -44,6 +47,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         clearInterval(ping);
       };
       req.signal.addEventListener("abort", () => cleanup());
+      // The task may have finished between the first read and subscribing: re-check once.
+      void (async () => {
+        const now = userId ? await getTask(params.id, userId) : undefined;
+        if (now && TERMINAL.has(now.status)) void finish();
+      })();
     },
     cancel() {
       cleanup();

@@ -2,6 +2,7 @@
 import { createHash, randomUUID } from "crypto";
 import { DEFAULT_MODELS, TASKS, baselineModel, estimateTokens, priceOf, selectModel } from "./models";
 import { parseJson } from "./json";
+import { isPublicHost } from "./net";
 import { buildMessages, simulate, type Msg, type Payload } from "./tasks";
 import type { ModelInfo, TaskKind, UsageRecord } from "./types";
 
@@ -138,11 +139,25 @@ export async function fetchSiteText(website: string): Promise<string> {
   const url = /^https?:\/\//i.test(website) ? website : `https://${website}`;
   try {
     const u = new URL(url);
-    if (/^(localhost|127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(u.hostname) || u.hostname.endsWith(".internal")) return "";
+    if (!isPublicHost(u)) return "";
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 5000);
-    const res = await fetch(u, { signal: ctrl.signal, headers: { "User-Agent": "RevenueAgentBot/0.1" }, redirect: "follow" });
+    // Follow at most 3 redirects ourselves so each hop is checked (no redirect into private hosts).
+    let res: Response | null = null;
+    let target = u;
+    for (let hop = 0; hop < 4; hop++) {
+      res = await fetch(target, { signal: ctrl.signal, headers: { "User-Agent": "RevenueAgentBot/0.1" }, redirect: "manual" });
+      const loc = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
+      if (!loc) break;
+      target = new URL(loc, target);
+      if (!isPublicHost(target)) {
+        clearTimeout(t);
+        return "";
+      }
+      res = null;
+    }
     clearTimeout(t);
+    if (!res) return "";
     if (!res.ok || !(res.headers.get("content-type") ?? "").includes("html")) return "";
     const html = (await res.text()).slice(0, 300_000);
     return html
@@ -156,3 +171,4 @@ export async function fetchSiteText(website: string): Promise<string> {
     return "";
   }
 }
+
