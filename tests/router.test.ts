@@ -22,7 +22,7 @@ test("baseline is premium and costs more than economy", () => {
   const b = baselineModel(DEFAULT_MODELS);
   assert.equal(b.tier, "premium");
   assert.ok(priceOf(b, 1000, 1000) > 10 * priceOf(DEFAULT_MODELS[0], 1000, 1000));
-  assert.equal(priceOf(DEFAULT_MODELS[0], 1_000_000, 0), 0.05);
+  assert.equal(priceOf(DEFAULT_MODELS[0], 1_000_000, 0), 0.15);
 });
 
 test("rule score ranks signal-rich prospects above quiet ones", () => {

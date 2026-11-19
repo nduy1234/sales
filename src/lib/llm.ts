@@ -29,7 +29,7 @@ export class AgentError extends Error {
 async function callModel(cfg: ReturnType<typeof getConfig>, model: ModelInfo, messages: Msg[], maxTokens: number) {
   const body: Record<string, unknown> = { model: model.id, messages, max_tokens: maxTokens };
   // GPT-5 family are reasoning models; keep reasoning minimal so the token budget goes to the answer.
-  if (/gpt-5/.test(model.id)) {
+  if (/gpt-5-(mini|nano)$|gpt-5$/.test(model.id)) {
     body.reasoning_effort = "minimal";
     body.max_tokens = maxTokens + 600;
   } else body.temperature = 0.6;

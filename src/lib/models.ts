@@ -3,9 +3,9 @@ import type { ModelInfo, TaskKind, Tier } from "./types";
 // Default catalog. Prices are public list-price estimates (USD / 1M tokens) used to
 // estimate cost from the token counts TokenRouter returns. IDs can be overridden by env.
 export const DEFAULT_MODELS: ModelInfo[] = [
-  { id: "openai/gpt-5-nano", label: "GPT-5 nano", tier: "economy", quality: 1, inPer1M: 0.05, outPer1M: 0.4 },
+  { id: "openai/gpt-4o-mini", label: "GPT-4o mini", tier: "economy", quality: 1, inPer1M: 0.15, outPer1M: 0.6 },
   { id: "openai/gpt-5-mini", label: "GPT-5 mini", tier: "balanced", quality: 2, inPer1M: 0.25, outPer1M: 2.0 },
-  { id: "anthropic/claude-sonnet-4-5", label: "Claude Sonnet 4.5", tier: "premium", quality: 3, inPer1M: 3.0, outPer1M: 15.0 },
+  { id: "openai/gpt-5.4", label: "GPT-5.4", tier: "premium", quality: 3, inPer1M: 2.5, outPer1M: 15.0 },
 ];
 
 export interface TaskSpec {
