@@ -24,3 +24,23 @@ test("parses the agent's prospect table with links, dates and markdown", () => {
 test("no table, no rows", () => {
   assert.deepEqual(parseProspectTable("Browser is not connected; no prospects verified."), []);
 });
+
+test("handles 'intent evidence' + separate 'sources' columns", () => {
+  const md = `| Business | Fit | Intent evidence | Sources | Suggested next step |
+| --- | --- | --- | --- | --- |
+| Cedar Vet Clinic | Veterinary, 12 staff | Asked for website recommendations (2026-11-14) | [post](https://example.net/p/1) | Offer a free audit |`;
+  const [r] = parseProspectTable(md);
+  assert.equal(r.name, "Cedar Vet Clinic");
+  assert.match(r.signal, /website recommendations/);
+  assert.equal(r.evidenceUrl, "https://example.net/p/1");
+});
+
+test("skips search-limitation rows the agent puts in the table", () => {
+  const md = `| Rank | Business | Intent Evidence | Sources & Dates |
+| --- | --- | --- | --- |
+| 1 | Enable Dental | Hiring for booking workflow roles | RemoteOK listing (Nov 19, 2026) |
+| 2 | Prospect Search Limitation | No verified public buying intent | Automated crawl |`;
+  const rows = parseProspectTable(md);
+  assert.deepEqual(rows.map((r) => r.name), ["Enable Dental"]);
+  assert.equal(rows[0].evidenceDate, "Nov 19, 2026");
+});

@@ -171,12 +171,14 @@ async function execute(rec: TaskRecord, follow: { previousResponseId?: string; s
 /** Creates the user's task record and starts it WITHOUT awaiting (it outlives the browser request). */
 export async function startTask(userId: string, input: string, parent?: TaskRecord): Promise<TaskRecord> {
   if (parent && !TERMINAL.has(parent.status)) throw new Error("busy");
+  // A session continues on the harness it started on; tasks from a previously configured harness can't be continued.
+  if (parent && parent.harnessId !== RESEARCH_HARNESS_ID) throw new Error("stale");
   const rec: TaskRecord = {
     taskId: randomUUID().replace(/-/g, ""),
     userId,
     feature: "prospect-research",
-    // Always the server's configured harness; a follow-up reuses the harness the session started on.
-    harnessId: parent?.harnessId ?? RESEARCH_HARNESS_ID,
+    // Always the server's configured harness (never from the browser).
+    harnessId: RESEARCH_HARNESS_ID,
     idempotencyKey: newIdempotencyKey(),
     input,
     parentTaskId: parent?.taskId,
@@ -216,7 +218,7 @@ export function publicTask(t: TaskRecord) {
     incompleteReason: t.incompleteReason,
     error: t.error,
     parentId: t.parentTaskId,
-    canContinue: TERMINAL.has(t.status) && !!t.responseId && t.status !== "cancelled",
+    canContinue: TERMINAL.has(t.status) && !!t.responseId && t.status !== "cancelled" && t.harnessId === RESEARCH_HARNESS_ID,
     createdAt: t.createdAt,
     updatedAt: t.updatedAt,
   };

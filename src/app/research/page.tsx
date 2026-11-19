@@ -6,6 +6,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button, Card, EmptyState, ErrorBanner, PageHeader, cx, inputCls } from "@/components/ui";
 import { parseProspectTable } from "@/lib/discovery";
+import { requestsPublishing } from "@/lib/publishing";
+import { nextSlots } from "@/lib/schedule";
 import { finalize, ruleScore } from "@/lib/scoring";
 import { uid, useStore } from "@/lib/store";
 import type { Prospect } from "@/lib/types";
@@ -29,16 +31,41 @@ interface Live { text: string; activity: string[] }
 
 const TERMINAL = new Set<Status>(["completed", "incomplete", "failed", "cancelled"]);
 
-function template(b: Brand) {
-  const today = new Date().toISOString().slice(0, 10);
+type PublishMode = "drafts" | "schedule";
+const DRAFTS_LINE = "Publishing: Drafts only. Return the LinkedIn and X drafts for my approval; do not publish or schedule anything.";
+
+function localDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function publishingLine(mode: PublishMode, tz: string) {
+  if (mode === "drafts") return DRAFTS_LINE;
+  // Next upcoming posting windows (same rules as the Content Studio calendar).
+  const fmt = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+  const [li] = nextSlots("linkedin", new Date(), new Set());
+  const [x] = nextSlots("x", new Date(), new Set());
+  return `Publishing: Schedule the LinkedIn post for ${fmt(li)} and the X post for ${fmt(x)} (${tz}) on the connected Zernio accounts above. Check for duplicates first and report the scheduled post IDs or URLs.`;
+}
+
+function template(b: Brand, mode: PublishMode = "drafts") {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   return `Business: ${b.name}
 Offer: ${b.offer}
 Target customers: ${b.icp}. Industries: ${b.targetIndustries.join(", ")}.
+Geography: United States (local service businesses)
 Brand voice: ${b.voice}
+Destination link: (add your website URL)
+Time zone: ${tz}
+Accounts: my LinkedIn and X accounts connected in Zernio
+${publishingLine(mode, tz)}
 
-Today (${today}):
-1. Find up to 5 prospects matching these customers with recent, public buying signals (e.g. a stated need for a new website, online booking or local SEO). Include evidence links and dates.
-2. Draft 1 LinkedIn post for today about why local service businesses lose bookings on mobile.`;
+Today (${localDate()}):
+1. Find up to 5 prospects matching these customers with recent, public buying-intent signals (e.g. a stated need for a new website, online booking or local SEO). Include source URLs and dates, and separate facts from inference.
+2. Write 1 LinkedIn post and 1 X post for today about why local service businesses lose bookings on mobile.`;
 }
 
 export default function ResearchPage() {
@@ -51,9 +78,21 @@ export default function ResearchPage() {
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [followUp, setFollowUp] = useState("");
+  const [mode, setMode] = useState<PublishMode>("drafts");
+  const [consent, setConsent] = useState(false);
   const esRef = useRef<EventSource | null>(null);
+  const wantsPublish = requestsPublishing(input);
+  const followWantsPublish = requestsPublishing(followUp);
 
-  useEffect(() => setInput((v) => v || template(brand)), [brand]);
+  function switchMode(m: PublishMode) {
+    setMode(m);
+    setConsent(false);
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    setInput((v) => (/^Publishing:.*$/m.test(v) ? v.replace(/^Publishing:.*$/m, publishingLine(m, tz)) : `${publishingLine(m, tz)}\n${v}`));
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => setInput((v) => v || template(brand, mode)), [brand]);
 
   const upsert = useCallback((t: Task) => setTasks((prev) => [t, ...(prev ?? []).filter((x) => x.id !== t.id)].sort((a, b) => b.createdAt - a.createdAt)), []);
 
@@ -148,19 +187,32 @@ export default function ResearchPage() {
 
   return (
     <div>
-      <PageHeader title="Research Agent" subtitle="A cloud agent researches public prospect signals and drafts today's LinkedIn content in your brand voice. It runs for minutes, cites its sources and never posts or sends anything for you." />
+      <PageHeader title="Research & Publish Agent" subtitle="A cloud agent researches public buying-intent signals and writes today's LinkedIn and X content in your brand voice. It returns drafts by default; it schedules or publishes through your connected Zernio accounts only when your request explicitly asks. It never messages prospects, runs ads or spends money." />
 
       {!configured && <div className="mb-6"><ErrorBanner message="The research agent is not configured on the server (missing HR_API_KEY). Ask your administrator to add it." /></div>}
 
       <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
         <div className="space-y-6">
-          <Card title="New research request" subtitle="Include your business, offer, target customers, brand voice and what you need today">
-            <textarea className={cx(inputCls, "min-h-[220px] font-mono text-[13px] leading-relaxed")} value={input} onChange={(e) => setInput(e.target.value)} maxLength={8000} />
+          <Card title="New request" subtitle="Business, offer, customers, brand voice, destination link, time zone, accounts and today's scope">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-slate-600">Publishing:</span>
+              <div className="flex gap-1 rounded-lg border border-slate-200 bg-white p-1">
+                <button onClick={() => switchMode("drafts")} className={cx("rounded-md px-3 py-1 text-xs font-medium", mode === "drafts" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100")}>Drafts for approval</button>
+                <button onClick={() => switchMode("schedule")} className={cx("rounded-md px-3 py-1 text-xs font-medium", mode === "schedule" ? "bg-amber-600 text-white" : "text-slate-600 hover:bg-slate-100")}>Schedule on LinkedIn &amp; X</button>
+              </div>
+            </div>
+            <textarea className={cx(inputCls, "min-h-[260px] font-mono text-[13px] leading-relaxed")} value={input} onChange={(e) => { setInput(e.target.value); setConsent(false); }} maxLength={8000} />
+            {wantsPublish && (
+              <label className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                <span>This request asks the agent to <b>publish or schedule</b> on your connected LinkedIn and X accounts. The agent treats that as authorization and will act without a separate draft approval. I confirm the accounts, dates and content scope above.</span>
+              </label>
+            )}
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <Button onClick={() => submit(input)} loading={submitting && !followUp} disabled={!configured || !input.trim() || !!anyRunning} className="px-5 py-2.5">
-                {!submitting && <Send className="h-4 w-4" />} Run research agent
+              <Button onClick={() => submit(input)} loading={submitting && !followUp} disabled={!configured || !input.trim() || !!anyRunning || (wantsPublish && !consent)} className="px-5 py-2.5">
+                {!submitting && <Send className="h-4 w-4" />} {wantsPublish ? "Run agent & schedule" : "Run agent"}
               </Button>
-              <button className="text-xs text-slate-500 hover:text-slate-800" onClick={() => setInput(template(brand))}>Reset to brand template</button>
+              <button className="text-xs text-slate-500 hover:text-slate-800" onClick={() => { setInput(template(brand, mode)); setConsent(false); }}>Reset to brand template</button>
               {anyRunning && <span className="text-xs text-slate-500">One task at a time — wait for the current one to finish.</span>}
             </div>
             {err && <div className="mt-3"><ErrorBanner message={err} /></div>}
@@ -218,9 +270,15 @@ export default function ResearchPage() {
                 <div className="mt-5 border-t border-slate-100 pt-4">
                   <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-600"><CornerDownRight className="h-3.5 w-3.5" /> Continue this result (revise, answer its questions, add details)</label>
                   <div className="flex gap-2">
-                    <input className={inputCls} placeholder="e.g. Make the post shorter and focus on dental clinics" value={followUp} onChange={(e) => setFollowUp(e.target.value)} onKeyDown={(e) => e.key === "Enter" && followUp.trim() && !anyRunning && submit(followUp, active.id)} />
-                    <Button onClick={() => submit(followUp, active.id)} loading={submitting && !!followUp} disabled={!followUp.trim() || !!anyRunning}>Continue</Button>
+                    <input className={inputCls} placeholder="e.g. Make the post shorter and focus on dental clinics" value={followUp} onChange={(e) => { setFollowUp(e.target.value); setConsent(false); }} onKeyDown={(e) => e.key === "Enter" && followUp.trim() && !anyRunning && (!followWantsPublish || consent) && submit(followUp, active.id)} />
+                    <Button onClick={() => submit(followUp, active.id)} loading={submitting && !!followUp} disabled={!followUp.trim() || !!anyRunning || (followWantsPublish && !consent)}>Continue</Button>
                   </div>
+                  {followWantsPublish && (
+                    <label className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                      <input type="checkbox" className="mt-0.5 h-4 w-4" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                      <span>This follow-up asks the agent to publish or schedule on your connected accounts. I confirm.</span>
+                    </label>
+                  )}
                   <p className="mt-1 text-[11px] text-slate-400">A follow-up carries the earlier context, so it costs more than a new request.</p>
                 </div>
               )}
@@ -302,7 +360,7 @@ function Markdown({ text }: { text: string }) {
   return (
     <div className="prose-agent text-sm text-slate-700">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer nofollow">{children}</a> }}>
-        {text}
+        {text.replace(/<br\s*\/?>/gi, " · ")}
       </ReactMarkdown>
     </div>
   );

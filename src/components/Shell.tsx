@@ -11,7 +11,7 @@ const NAV = [
   { href: "/", label: "Dashboard", icon: BarChart3 },
   { href: "/autopilot", label: "Autopilot", icon: Rocket, badge: "Agent" },
   { href: "/workflow", label: "Single-lead Workflow", icon: Workflow },
-  { href: "/research", label: "Research Agent", icon: Bot, badge: "Cloud" },
+  { href: "/research", label: "Research & Publish", icon: Bot, badge: "Cloud" },
   { href: "/prospects", label: "Prospects", icon: Users },
   { href: "/content", label: "Content Studio", icon: PenSquare },
   { href: "/router", label: "Cost Router", icon: Cpu },

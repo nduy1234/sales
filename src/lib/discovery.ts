@@ -30,13 +30,16 @@ export function parseProspectTable(md: string): DiscoveredRow[] {
     const col = (re: RegExp) => head.findIndex((h) => re.test(h));
     const name = col(/prospect|company|account|business/);
     if (name < 0) continue;
-    const fit = col(/fit/), signal = col(/signal|intent/), ev = col(/evidence|source|url|link/), conf = col(/confidence/), next = col(/next/);
+    const src = col(/source|url|link/);
+    const fit = col(/fit/), signal = col(/signal|intent/), ev = src >= 0 ? src : col(/evidence/), conf = col(/confidence/), next = col(/next/);
     const rows: DiscoveredRow[] = [];
     for (let j = i + 2; j < lines.length && lines[j].includes("|"); j++) {
       const c = cells(lines[j]);
       const raw = (k: number) => (k >= 0 ? c[k] ?? "" : "");
       const n = strip(raw(name));
       if (!n || /^(none|n\/a|—|-|no (verified|qualifying|prospects?))/i.test(n)) continue;
+      // Agents sometimes report a search limitation as a table row; it is not a prospect.
+      if (/\b(limitation|no (verified|qualifying) |not found|none found|placeholder|unavailable)\b/i.test(n)) continue;
       const evRaw = raw(ev);
       const url = evRaw.match(/\((https?:\/\/[^)\s]+)\)/)?.[1] ?? evRaw.match(/https?:\/\/[^\s|)<>]+/)?.[0];
       const date = evRaw.match(/\b(20\d{2}-\d{2}-\d{2}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? 20\d{2})\b/)?.[1];

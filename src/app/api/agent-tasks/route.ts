@@ -38,6 +38,7 @@ export async function POST(req: Request) {
     const rec = await startTask(userId, input, parent);
     return NextResponse.json({ task: publicTask(rec) }, { status: 202 });
   } catch (e) {
+    if ((e as Error).message === "stale") return NextResponse.json({ error: "This task ran on a previous agent configuration and can't be continued. Start a new request." }, { status: 409 });
     if ((e as Error).message === "busy") return NextResponse.json({ error: "Wait for the current task to finish before continuing it." }, { status: 409 });
     return NextResponse.json({ error: "Could not start the task." }, { status: 500 });
   }
